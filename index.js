@@ -34,6 +34,8 @@ async function initDB() {
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  console.log("Banco conectado ✅");
 }
 
 initDB();
@@ -100,11 +102,7 @@ app.post("/sos/:id", async (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("Servidor rodando na porta " + PORT);
-});
-// 📍 listar todos os SOS (para o mapa)
+// 📍 listar todos os SOS (para mapa)
 app.get("/sos", async (req, res) => {
   const alerts = await db.all(`
     SELECT sos.*, boats.name
@@ -114,4 +112,10 @@ app.get("/sos", async (req, res) => {
   `);
 
   res.json(alerts);
+});
+
+// 🚀 iniciar servidor
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("Servidor rodando na porta " + PORT);
 });
