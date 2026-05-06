@@ -104,3 +104,14 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Servidor rodando na porta " + PORT);
 });
+// 📍 listar todos os SOS (para o mapa)
+app.get("/sos", async (req, res) => {
+  const alerts = await db.all(`
+    SELECT sos.*, boats.name
+    FROM sos
+    JOIN boats ON sos.boat_id = boats.id
+    ORDER BY timestamp DESC
+  `);
+
+  res.json(alerts);
+});
