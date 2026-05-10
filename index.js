@@ -139,7 +139,7 @@ function renderAuthPage(mode) {
         async
         crossorigin="anonymous"
         data-clerk-publishable-key="${escapeHtml(CLERK_PUBLISHABLE_KEY)}"
-        src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
         type="text/javascript">
       </script>
       <style>
@@ -203,7 +203,7 @@ function renderAuthPage(mode) {
               throw new Error("ClerkJS não carregou.");
             }
 
-            await window.Clerk.load({ publishableKey: publishableKey });
+            await window.Clerk.load();
 
             window.Clerk.${mountMethod}(mountElement, {
               afterSignInUrl: "/admin/boats",
