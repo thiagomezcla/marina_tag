@@ -7,6 +7,7 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "@clerk/express": "latest",
     "express": "^4.18.2",
     "pg": "^8.11.3",
     "uuid": "^9.0.1"

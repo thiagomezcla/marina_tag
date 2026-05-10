@@ -1,5 +1,6 @@
 import express from "express";
 import pg from "pg";
+import { clerkMiddleware, requireAuth } from "@clerk/express";
 import { v4 as uuidv4 } from "uuid";
 
 const { Pool } = pg;
@@ -7,6 +8,8 @@ const { Pool } = pg;
 const app = express();
 
 app.use(express.json());
+
+app.use(clerkMiddleware());
 
 // Libera acesso para testes externos
 app.use((req, res, next) => {
@@ -53,6 +56,164 @@ async function initDB() {
 }
 
 await initDB();
+
+// Página de cadastro com Clerk
+app.get("/sign-up", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Criar conta - Marina Tag</title>
+
+      <script
+        async
+        crossorigin="anonymous"
+        data-clerk-publishable-key="${process.env.CLERK_PUBLISHABLE_KEY}"
+        src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        type="text/javascript">
+      </script>
+
+      <style>
+        body {
+          margin: 0;
+          font-family: Arial, sans-serif;
+          background: linear-gradient(135deg, #0f172a, #0369a1);
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+        }
+
+        .page {
+          width: 100%;
+          max-width: 460px;
+        }
+
+        .brand {
+          text-align: center;
+          color: white;
+          margin-bottom: 24px;
+        }
+
+        .brand h1 {
+          margin-bottom: 8px;
+          font-size: 34px;
+        }
+
+        .brand p {
+          color: #dbeafe;
+          font-size: 16px;
+        }
+      </style>
+    </head>
+
+    <body>
+      <div class="page">
+        <div class="brand">
+          <h1>🚤 Marina Tag NFC</h1>
+          <p>Crie sua conta para acessar o painel</p>
+        </div>
+
+        <div id="sign-up"></div>
+      </div>
+
+      <script>
+        window.addEventListener("load", async () => {
+          await Clerk.load();
+
+          Clerk.mountSignUp(document.getElementById("sign-up"), {
+            afterSignInUrl: "/admin/boats",
+            afterSignUpUrl: "/admin/boats",
+            signInUrl: "/sign-in"
+          });
+        });
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+// Página de login com Clerk
+app.get("/sign-in", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Login - Marina Tag</title>
+
+      <script
+        async
+        crossorigin="anonymous"
+        data-clerk-publishable-key="${process.env.CLERK_PUBLISHABLE_KEY}"
+        src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        type="text/javascript">
+      </script>
+
+      <style>
+        body {
+          margin: 0;
+          font-family: Arial, sans-serif;
+          background: linear-gradient(135deg, #0f172a, #0369a1);
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+        }
+
+        .page {
+          width: 100%;
+          max-width: 460px;
+        }
+
+        .brand {
+          text-align: center;
+          color: white;
+          margin-bottom: 24px;
+        }
+
+        .brand h1 {
+          margin-bottom: 8px;
+          font-size: 34px;
+        }
+
+        .brand p {
+          color: #dbeafe;
+          font-size: 16px;
+        }
+      </style>
+    </head>
+
+    <body>
+      <div class="page">
+        <div class="brand">
+          <h1>🚤 Marina Tag NFC</h1>
+          <p>Acesse o painel administrativo</p>
+        </div>
+
+        <div id="sign-in"></div>
+      </div>
+
+      <script>
+        window.addEventListener("load", async () => {
+          await Clerk.load();
+
+          Clerk.mountSignIn(document.getElementById("sign-in"), {
+            afterSignInUrl: "/admin/boats",
+            afterSignUpUrl: "/admin/boats",
+            signUpUrl: "/sign-up"
+          });
+        });
+      </script>
+    </body>
+    </html>
+  `);
+});
 
 // Rota principal
 app.get("/", (req, res) => {
@@ -218,7 +379,7 @@ app.get("/sos", async (req, res) => {
 });
 
 // Página visual dos SOS
-app.get("/sos-page", async (req, res) => {
+app.get("/sos-page", requireAuth({ signInUrl: "/sign-in" }), async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -497,7 +658,7 @@ app.get("/boat-page/:id", async (req, res) => {
 });
 
 // Página administrativa
-app.get("/admin/boats", async (req, res) => {
+app.get("/admin/boats", requireAuth({ signInUrl: "/sign-in" }), async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT * FROM boats
