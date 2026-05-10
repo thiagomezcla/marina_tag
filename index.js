@@ -103,151 +103,53 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
-function renderAuthPage(mode) {
-  const isSignUp = mode === "sign-up";
-  const title = isSignUp ? "Criar conta - Marina Tag" : "Login - Marina Tag";
-  const subtitle = isSignUp
-    ? "Crie sua conta para acessar o painel"
-    : "Acesse o painel administrativo";
+const CLERK_ACCOUNT_PORTAL_URL = process.env.CLERK_ACCOUNT_PORTAL_URL;
+const PUBLIC_APP_URL = process.env.PUBLIC_APP_URL || "https://marina-tag.onrender.com";
 
-  const mountFunction = isSignUp ? "mountSignUp" : "mountSignIn";
+function getClerkPortalUrl(path, redirectPath = "/admin/boats") {
+  const portalBase = String(CLERK_ACCOUNT_PORTAL_URL || "").replace(/\/$/, "");
+  const appBase = String(PUBLIC_APP_URL || "").replace(/\/$/, "");
+  const redirectUrl = encodeURIComponent(`${appBase}${redirectPath}`);
 
-  if (!CLERK_PUBLISHABLE_KEY) {
-    return `
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Clerk não configurado</title>
-      </head>
-      <body style="font-family: Arial; padding: 24px;">
-        <h1>Clerk não configurado</h1>
-        <p>A variável <strong>CLERK_PUBLISHABLE_KEY</strong> não foi encontrada no Render.</p>
-      </body>
-      </html>
-    `;
-  }
+  return `${portalBase}${path}?redirect_url=${redirectUrl}`;
+}
 
+function renderMissingClerkPortalConfig() {
   return `
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>${title}</title>
-
-      <style>
-        body {
-          margin: 0;
-          font-family: Arial, sans-serif;
-          background: linear-gradient(135deg, #0f172a, #0369a1);
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 24px;
-        }
-
-        .page {
-          width: 100%;
-          max-width: 460px;
-        }
-
-        .brand {
-          text-align: center;
-          color: white;
-          margin-bottom: 24px;
-        }
-
-        .brand h1 {
-          margin-bottom: 8px;
-          font-size: 34px;
-        }
-
-        .brand p {
-          color: #dbeafe;
-          font-size: 16px;
-        }
-
-        #auth-root {
-          display: flex;
-          justify-content: center;
-        }
-
-        .loading,
-        .error {
-          background: white;
-          color: #0f172a;
-          padding: 18px;
-          border-radius: 12px;
-          text-align: center;
-          line-height: 1.5;
-          width: 100%;
-        }
-
-        .error {
-          color: #991b1b;
-        }
-      </style>
+      <title>Clerk não configurado</title>
     </head>
-
-    <body>
-      <div class="page">
-        <div class="brand">
-          <h1>🚤 Marina Tag NFC</h1>
-          <p>${subtitle}</p>
-        </div>
-
-        <div id="auth-root">
-          <div class="loading">Carregando login...</div>
-        </div>
-      </div>
-
-      <script type="module">
-        const publishableKey = ${JSON.stringify(CLERK_PUBLISHABLE_KEY)};
-        const root = document.getElementById("auth-root");
-
-        function showError(message) {
-          root.innerHTML =
-            '<div class="error">' +
-            '<strong>Erro ao carregar o login.</strong><br><br>' +
-            message +
-            '<br><br>Confira no Render se a variável <strong>CLERK_PUBLISHABLE_KEY</strong> começa com <strong>pk_test_</strong>.' +
-            '</div>';
-        }
-
-        try {
-          const { Clerk } = await import("https://esm.sh/@clerk/clerk-js@5");
-
-          const clerk = new Clerk(publishableKey);
-
-          await clerk.load();
-
-          root.innerHTML = "";
-
-          clerk.${mountFunction}(root, {
-            afterSignInUrl: "/admin/boats",
-            afterSignUpUrl: "/admin/boats",
-            signInUrl: "/sign-in",
-            signUpUrl: "/sign-up"
-          });
-        } catch (error) {
-          console.error(error);
-          showError(error.message || "Erro desconhecido.");
-        }
-      </script>
+    <body style="font-family: Arial, sans-serif; padding: 24px;">
+      <h1>Clerk Account Portal não configurado</h1>
+      <p>Confira no Render se existe a variável:</p>
+      <ul>
+        <li><strong>CLERK_ACCOUNT_PORTAL_URL</strong></li>
+      </ul>
+      <p>Ela deve ser a URL da API de front-end do Clerk, parecida com:</p>
+      <pre>https://comic-shrew-31.clerk.accounts.dev</pre>
     </body>
     </html>
   `;
 }
 
 app.get("/sign-in", (req, res) => {
-  res.send(renderAuthPage("sign-in"));
+  if (!CLERK_ACCOUNT_PORTAL_URL) {
+    return res.status(500).send(renderMissingClerkPortalConfig());
+  }
+
+  return res.redirect(getClerkPortalUrl("/sign-in", "/admin/boats"));
 });
 
 app.get("/sign-up", (req, res) => {
-  res.send(renderAuthPage("sign-up"));
+  if (!CLERK_ACCOUNT_PORTAL_URL) {
+    return res.status(500).send(renderMissingClerkPortalConfig());
+  }
+
+  return res.redirect(getClerkPortalUrl("/sign-up", "/admin/boats"));
 });
 
 app.get("/", (req, res) => {
