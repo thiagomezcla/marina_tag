@@ -438,6 +438,288 @@ app.get("/boat-page/:id", async (req, res) => {
   res.send(html);
 });
 
+// Página administrativa para cadastrar embarcações
+app.get("/admin/boats", async (req, res) => {
+  const boats = await db.all(`
+    SELECT * FROM boats
+    ORDER BY name ASC
+  `);
+
+  const boatsHtml =
+    boats.length === 0
+      ? `<p class="empty">Nenhuma embarcação cadastrada ainda.</p>`
+      : boats
+          .map((boat) => {
+            const nfcLink = `${req.protocol}://${req.get("host")}/boat-page/${boat.id}`;
+
+            return `
+              <div class="boat-card">
+                <h3>${boat.name}</h3>
+                <p><strong>Responsável:</strong> ${boat.owner}</p>
+                <p><strong>Telefone:</strong> ${boat.phone}</p>
+                <p><strong>Contato de emergência:</strong> ${boat.emergency_contact}</p>
+                <p><strong>ID:</strong> ${boat.id}</p>
+
+                <label>Link NFC:</label>
+                <input class="link-input" value="${nfcLink}" readonly />
+
+                <a class="open-link" href="${nfcLink}" target="_blank">
+                  Abrir página da embarcação
+                </a>
+              </div>
+            `;
+          })
+          .join("");
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Cadastro de Embarcações - Marina Tag</title>
+
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          background: #eef6fb;
+          margin: 0;
+          padding: 20px;
+          color: #1f2937;
+        }
+
+        .container {
+          max-width: 900px;
+          margin: 0 auto;
+        }
+
+        .header {
+          text-align: center;
+          margin-bottom: 24px;
+        }
+
+        .header h1 {
+          color: #0f172a;
+          margin-bottom: 6px;
+        }
+
+        .header p {
+          color: #475569;
+        }
+
+        .card {
+          background: white;
+          border-radius: 16px;
+          padding: 24px;
+          box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+          margin-bottom: 24px;
+        }
+
+        label {
+          display: block;
+          font-weight: bold;
+          margin-top: 14px;
+          margin-bottom: 6px;
+        }
+
+        input {
+          width: 100%;
+          padding: 12px;
+          border-radius: 8px;
+          border: 1px solid #cbd5e1;
+          font-size: 15px;
+          box-sizing: border-box;
+        }
+
+        button {
+          width: 100%;
+          margin-top: 20px;
+          padding: 14px;
+          background: #2563eb;
+          color: white;
+          border: none;
+          border-radius: 10px;
+          font-size: 16px;
+          font-weight: bold;
+          cursor: pointer;
+        }
+
+        button:hover {
+          background: #1d4ed8;
+        }
+
+        .success {
+          margin-top: 18px;
+          padding: 16px;
+          background: #dcfce7;
+          border: 1px solid #86efac;
+          border-radius: 10px;
+        }
+
+        .error {
+          margin-top: 18px;
+          padding: 16px;
+          background: #fee2e2;
+          border: 1px solid #fca5a5;
+          border-radius: 10px;
+        }
+
+        .boat-card {
+          background: white;
+          border-radius: 14px;
+          padding: 20px;
+          margin-bottom: 16px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+          border-left: 6px solid #2563eb;
+        }
+
+        .boat-card h3 {
+          margin-top: 0;
+          color: #0f172a;
+        }
+
+        .link-input {
+          margin-top: 6px;
+          background: #f8fafc;
+          font-size: 14px;
+        }
+
+        .open-link {
+          display: inline-block;
+          margin-top: 12px;
+          padding: 10px 14px;
+          background: #0f766e;
+          color: white;
+          text-decoration: none;
+          border-radius: 8px;
+          font-weight: bold;
+        }
+
+        .empty {
+          background: white;
+          padding: 20px;
+          border-radius: 12px;
+          text-align: center;
+          color: #64748b;
+        }
+
+        .menu {
+          display: flex;
+          gap: 10px;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+
+        .menu a {
+          background: #0f172a;
+          color: white;
+          padding: 10px 14px;
+          border-radius: 8px;
+          text-decoration: none;
+          font-weight: bold;
+        }
+      </style>
+    </head>
+
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>🚤 Cadastro de Embarcações</h1>
+          <p>Marina Tag NFC</p>
+        </div>
+
+        <div class="menu">
+          <a href="/sos-page" target="_blank">Ver Alertas SOS</a>
+          <a href="/boats" target="_blank">Ver JSON das Embarcações</a>
+        </div>
+
+        <div class="card">
+          <h2>Nova embarcação</h2>
+
+          <form id="boatForm">
+            <label>Nome da embarcação</label>
+            <input id="name" type="text" placeholder="Ex: Lancha Azul" required />
+
+            <label>Nome do responsável</label>
+            <input id="owner" type="text" placeholder="Ex: Thiago" required />
+
+            <label>Telefone</label>
+            <input id="phone" type="text" placeholder="Ex: 43999999999" required />
+
+            <label>Contato de emergência</label>
+            <input id="emergency_contact" type="text" placeholder="Ex: 43988888888" required />
+
+            <button type="submit">Cadastrar embarcação</button>
+          </form>
+
+          <div id="result"></div>
+        </div>
+
+        <h2>Embarcações cadastradas</h2>
+        ${boatsHtml}
+      </div>
+
+      <script>
+        const form = document.getElementById("boatForm");
+        const resultBox = document.getElementById("result");
+
+        form.addEventListener("submit", async function(event) {
+          event.preventDefault();
+
+          const data = {
+            name: document.getElementById("name").value,
+            owner: document.getElementById("owner").value,
+            phone: document.getElementById("phone").value,
+            emergency_contact: document.getElementById("emergency_contact").value
+          };
+
+          try {
+            const response = await fetch("/boats", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+              const link = window.location.origin + "/boat-page/" + result.id;
+
+              resultBox.innerHTML =
+                '<div class="success">' +
+                '<strong>Embarcação cadastrada com sucesso!</strong><br><br>' +
+                '<strong>ID:</strong><br>' + result.id + '<br><br>' +
+                '<strong>Link NFC:</strong><br>' +
+                '<input class="link-input" value="' + link + '" readonly />' +
+                '<br><br>' +
+                '<a class="open-link" target="_blank" href="' + link + '">Abrir página da embarcação</a>' +
+                '<br><br>' +
+                '<button onclick="location.reload()" type="button">Atualizar lista</button>' +
+                '</div>';
+
+              form.reset();
+            } else {
+              resultBox.innerHTML =
+                '<div class="error">' +
+                (result.error || "Erro ao cadastrar embarcação.") +
+                '</div>';
+            }
+          } catch (error) {
+            resultBox.innerHTML =
+              '<div class="error">Erro de conexão com o servidor.</div>';
+          }
+        });
+      </script>
+    </body>
+    </html>
+  `;
+
+  res.send(html);
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
